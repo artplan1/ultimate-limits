@@ -49,4 +49,4 @@ No model probes, local-token estimates, browser cookies, new logins, billing mut
 - `node <ultimate-clone>/scripts/check-extension.ts <this-folder>`: type-check against the host SDK without installing or copying anything.
 - Use the clone's installed formatter on this folder only.
 
-Preview runs through the existing host and personal extension link. No commits, staging or delivery have been authorized.
+Preview runs through the existing host and personal extension link.
