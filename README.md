@@ -2,6 +2,10 @@ Subscription limits for the current Ultimate project, with the current conversat
 
 Personal extension in a standalone repository, linked as `~/.ultimate/extensions/limits`. Package: `ultimate-limits`; extension/action id: `limits`. It uses Ultimate's SDK and existing provider authentication, with no dependencies to install.
 
+![Limits chip in the status bar: a gauge icon and the provider with its remaining percentage](screenshots/limits-chip.png)
+
+![Limits popup listing the project's subscriptions with their windows, resets and refresh controls](screenshots/limits-popover.png)
+
 ## Display and project scope
 
 The collapsed chip follows the shown conversation's provider and shows the remaining percentage of the shortest shared window that provider reports: the five-hour window when there is one, otherwise the weekly one, otherwise the monthly one. It reads `Go · 100%` or `Codex · 68%`; the window it belongs to is named in the popup. There is no chip preference to choose. A provider-reported or observed exhausted window always remains visible as `limit reached`, even when the selected five-hour allowance is larger.
@@ -26,14 +30,6 @@ Source research on 2026-11-13:
 | `xai`          | No quota request                                                                             | Grok Build billing is not proven to cover Ultimate's xAI API route; unavailable if selected in project scope. |
 
 These are source-backed endpoints, not a guaranteed stable public API. Custom provider origins and plain API-key Claude/Codex billing are not supported. Quota is an account allowance, not a prediction of remaining requests for a model. Additional model/group limits produce an explicit partial-coverage warning.
-
-References (contracts, not dependencies):
-
-- [OpenAI Codex client, 69231e1](https://github.com/openai/codex/blob/69231e119bfca0b14453515e97d99688ce1c47c9/codex-rs/backend-client/src/client.rs).
-- [OpenCode usage limits, ba77ff9](https://github.com/anomalyco/opencode/blob/ba77ff90d34efc0bc792169698c760dd892ad1e2/packages/core/src/usage-limits.ts#L98-L191).
-- [CodexBar Claude fetcher, 7447bc7, MIT](https://github.com/steipete/CodexBar/blob/7447bc77c2497323d9c41e40164ce705533493c8/Sources/CodexBarCore/Providers/Claude/ClaudeOAuth/ClaudeOAuthUsageFetcher.swift).
-- [Pi usage monitor, 686724e, MIT](https://github.com/mtrojnar/pi-usage/tree/686724e0332f5a3a5aa91519637ce425e107aa04).
-- [Official Grok billing, 2bdd1d6](https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-shell/src/extensions/billing.rs).
 
 ## Refresh and safety
 

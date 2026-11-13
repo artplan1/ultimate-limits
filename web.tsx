@@ -61,13 +61,11 @@ function useQuota(provider: string, enabled: boolean) {
 function Subscription({
   provider,
   current,
-  model,
   visible,
   now,
 }: {
   provider: string
   current: boolean
-  model?: string
   visible: boolean
   now: number
 }) {
@@ -90,6 +88,11 @@ function Subscription({
     }
   }
   const dashboard = Object.hasOwn(providers, provider) ? providers[provider]?.dashboard : undefined
+  const read = data
+    ? `Read ${localTime(data.checkedAt)}${old ? ' · stale' : ''}${
+        data.retryAt && data.retryAt > now ? ` · retry after ${localTime(data.retryAt)}` : ''
+      }`
+    : undefined
   return (
     <section
       data-quota-provider={provider}
@@ -101,14 +104,22 @@ function Subscription({
           {current && <span className="text-[10px] text-brand">Current</span>}
           {data?.limited && <span className="text-[10px] text-warning">Limit reached</span>}
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1">
+          {read && (
+            <span
+              className="mr-0.5 min-w-0 truncate text-[10px] text-muted-foreground"
+              title={read}
+            >
+              {read}
+            </span>
+          )}
           {dashboard && (
             <a
               href={dashboard}
               target="_blank"
               rel="noreferrer"
               aria-label={`${providerLabel(provider)} usage dashboard`}
-              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               <ExternalLinkIcon className="size-3" />
             </a>
@@ -120,7 +131,7 @@ function Subscription({
               disabled={refreshing || quota.loading || !visible}
               aria-label={`Refresh ${providerLabel(provider)} quota`}
               title="Refresh (at most once per minute)"
-              className="rounded p-1 text-muted-foreground hover:bg-accent disabled:opacity-40"
+              className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent disabled:cursor-default disabled:opacity-40"
             >
               <RefreshCwIcon
                 className={cn('size-3', (refreshing || quota.loading) && 'animate-spin')}
@@ -129,11 +140,6 @@ function Subscription({
           )}
         </div>
       </div>
-      {current && model && (
-        <div className="mt-0.5 truncate text-[10px] text-muted-foreground" title={model}>
-          {model}
-        </div>
-      )}
       <div className="mt-2 space-y-2">
         {data?.windows.map((item) => {
           const expired = item.resetAt !== undefined && item.resetAt <= now
@@ -190,20 +196,12 @@ function Subscription({
           <div className="text-[10px] text-warning">Refresh failed; previous reading retained.</div>
         )}
       </div>
-      {data && (
-        <div className="mt-1.5 text-[10px] text-muted-foreground">
-          Read {localTime(data.checkedAt)}
-          {old ? ' · stale' : ''}
-          {data.retryAt && data.retryAt > now ? ` · retry after ${localTime(data.retryAt)}` : ''}
-        </div>
-      )}
     </section>
   )
 }
 
 function QuotaChip() {
   const provider = useConversation((conversation) => conversation.agent.model?.provider)
-  const model = useConversation((conversation) => conversation.agent.model?.modelId)
   const models = useModels()
   const [visible, setVisible] = useState(!document.hidden)
   const [open, setOpen] = useState(false)
@@ -245,7 +243,7 @@ function QuotaChip() {
           type="button"
           data-ui="limits"
           className={cn(
-            'flex shrink-0 items-center gap-1.5 whitespace-nowrap hover:text-foreground transition-colors',
+            'flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap hover:text-foreground transition-colors',
             old && 'opacity-60',
             !old && (data?.limited || (selected && selected.remaining <= 20)) && 'text-warning',
           )}
@@ -275,7 +273,6 @@ function QuotaChip() {
                 key={item.id}
                 provider={item.id}
                 current={item.id === provider}
-                model={model}
                 visible={visible}
                 now={now}
               />
@@ -289,9 +286,6 @@ function QuotaChip() {
                   : 'No subscriptions used by this project.'}
             </div>
           )}
-        </div>
-        <div className="border-t border-border/70 px-3 py-2 text-[10px] text-muted-foreground">
-          Shared allowances, not remaining model requests.
         </div>
       </PopoverContent>
     </Popover>
