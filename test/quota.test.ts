@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { configuredSubscriptions, parse, preferred, remaining } from '../quota.ts'
+import { configuredSubscriptions, parse, preferred } from '../quota.ts'
 import { createReader, type Host } from '../client.ts'
 
 const NOW = Date.parse('2026-11-13T12:00:00Z')
@@ -21,8 +21,7 @@ test('Codex weekly-only plans keep their reported duration and expire without in
     NOW,
   )
   assert.deepEqual(quota.windows, [{ label: '7 days', remaining: 68, resetAt: Date.parse(RESET) }])
-  assert.equal(remaining(quota, NOW), 68)
-  assert.equal(remaining(quota, Date.parse(RESET)), undefined)
+  assert.equal(preferred(quota, Date.parse(RESET)), undefined)
 })
 
 test('Claude separates shared quota from additional model/group limits', () => {
@@ -40,7 +39,6 @@ test('Claude separates shared quota from additional model/group limits', () => {
     [63, 92],
   )
   assert.equal(quota.partial, true)
-  assert.equal(remaining(quota, NOW), 63)
 })
 
 test('Go parses percentage units, not fractions or API spend estimates', () => {
@@ -59,37 +57,38 @@ test('Go parses percentage units, not fractions or API spend estimates', () => {
     quota.windows.map((item) => item.remaining),
     [99.5, 9, 55],
   )
-  assert.equal(remaining(quota, NOW), 9)
   assert.equal(parse('opencode-go', { balance: 42 }, NOW).status, 'unavailable')
   assert.equal(parse('anthropic', { five_hour: { utilization: null } }, NOW).windows.length, 0)
 })
 
-test('chip priority prefers 5h, falls back to longer shared windows, and never clears another exhausted window', () => {
+test('chip shows the five-hour window before weekly and monthly, and never clears another exhausted window', () => {
   const quota = parse(
     'opencode-go',
     {
       usage: {
         rolling: { percent: 0, resetsAt: RESET },
         weekly: { percent: 91, resetsAt: RESET },
+        monthly: { percent: 45, resetsAt: RESET },
       },
     },
     NOW,
   )
-  assert.equal(preferred(quota, NOW, 'five-hour')?.remaining, 100)
-  assert.equal(preferred(quota, NOW, 'tightest')?.remaining, 9)
+  assert.equal(preferred(quota, NOW)?.label, '5 hours')
   const expired = {
     ...quota,
     windows: quota.windows.map((item) =>
       item.label === '5 hours' ? { ...item, resetAt: NOW } : item,
     ),
   }
-  assert.equal(preferred(expired, NOW, 'five-hour')?.label, '7 days')
+  assert.equal(preferred(expired, NOW)?.label, '7 days')
   const weeklyOnly = parse(
     'openai-codex',
     { rate_limit: { primary_window: { used_percent: 32, limit_window_seconds: 604800 } } },
     NOW,
   )
-  assert.equal(preferred(weeklyOnly, NOW, 'five-hour')?.label, '7 days')
+  assert.equal(preferred(weeklyOnly, NOW)?.label, '7 days')
+  const monthlyOnly = { ...quota, windows: quota.windows.filter((item) => item.label === 'Month') }
+  assert.equal(preferred(monthlyOnly, NOW)?.label, 'Month')
   const blocked = parse(
     'opencode-go',
     {
@@ -100,7 +99,7 @@ test('chip priority prefers 5h, falls back to longer shared windows, and never c
     },
     NOW,
   )
-  assert.equal(preferred(blocked, NOW, 'five-hour')?.remaining, 100)
+  assert.equal(preferred(blocked, NOW)?.remaining, 100)
   assert.equal(blocked.limited, true)
 })
 

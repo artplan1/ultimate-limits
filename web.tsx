@@ -9,12 +9,13 @@ import {
   useAction,
   useConversation,
   useModels,
+  useNow,
 } from '@/sdk'
 import {
   configuredSubscriptions,
   preferred,
+  providerLabel,
   providers,
-  type Priority,
   type Snapshot,
 } from './quota.ts'
 import { TTL } from './cache.ts'
@@ -22,17 +23,7 @@ import type { Scope } from './scope.ts'
 
 const Quota = actionRef<{ provider: string; refresh?: boolean }, Snapshot>('limits', 'quota')
 const ScopeAction = actionRef<null, Scope>('limits', 'scope')
-// Keep the browser preference across the preview's extension rename; no quota history is stored.
-const PRIORITY_KEY = 'subscription-quota.priority'
 const percent = (value: number) => `${value > 0 && value < 1 ? '<1' : Math.floor(value)}%`
-const shortLabel = (label: string) =>
-  label === '5 hours' ? '5h' : label === '7 days' ? '7d' : label
-const providerLabel = (provider: string) =>
-  Object.hasOwn(providers, provider)
-    ? providers[provider]!.label
-    : provider === 'xai'
-      ? 'Grok'
-      : provider
 const localTime = (value: number) =>
   new Date(value).toLocaleString(undefined, {
     month: 'short',
@@ -216,36 +207,15 @@ function QuotaChip() {
   const models = useModels()
   const [visible, setVisible] = useState(!document.hidden)
   const [open, setOpen] = useState(false)
-  const [now, setNow] = useState(Date.now)
-  const [priority, setPriority] = useState<Priority>(() => {
-    try {
-      return localStorage.getItem(PRIORITY_KEY) === 'tightest' ? 'tightest' : 'five-hour'
-    } catch {
-      return 'five-hour' /* Storage can be denied; the default remains usable for this page. */
-    }
-  })
-  const [saveFailed, setSaveFailed] = useState(false)
+  const now = useNow(60_000, visible)
   useEffect(() => {
-    const changed = () => {
-      setVisible(!document.hidden)
-      setNow(Date.now())
-    }
-    const storage = (event: StorageEvent) => {
-      if (event.key === PRIORITY_KEY)
-        setPriority(event.newValue === 'tightest' ? 'tightest' : 'five-hour')
-    }
+    const changed = () => setVisible(!document.hidden)
     document.addEventListener('visibilitychange', changed)
-    window.addEventListener('storage', storage)
-    const timer = window.setInterval(() => setNow(Date.now()), 60_000)
-    return () => {
-      document.removeEventListener('visibilitychange', changed)
-      window.removeEventListener('storage', storage)
-      window.clearInterval(timer)
-    }
+    return () => document.removeEventListener('visibilitychange', changed)
   }, [])
   const quota = useQuota(provider ?? '', !!provider && visible)
   const data = quota.data?.provider === provider ? quota.data : undefined
-  const selected = data && preferred(data, now, priority)
+  const selected = data && preferred(data, now)
   const old = !!data && (stale(data, now) || !!quota.error)
   const project = useAction(ScopeAction, null, {
     enabled: open && visible,
@@ -260,20 +230,11 @@ function QuotaChip() {
     project.data?.error ? [] : (project.data?.providers ?? []),
     provider,
   )
-  const changePriority = (value: Priority) => {
-    setPriority(value)
-    try {
-      localStorage.setItem(PRIORITY_KEY, value)
-      setSaveFailed(false)
-    } catch {
-      setSaveFailed(true) /* Report non-persistence instead of silently losing the user's choice. */
-    }
-  }
   if (!provider) return null
   const summary = data?.limited
     ? 'limit reached'
     : selected
-      ? `${shortLabel(selected.label)} ${percent(selected.remaining)}`
+      ? percent(selected.remaining)
       : quota.loading
         ? '…'
         : '—'
@@ -288,7 +249,7 @@ function QuotaChip() {
             old && 'opacity-60',
             !old && (data?.limited || (selected && selected.remaining <= 20)) && 'text-warning',
           )}
-          title={`Remaining shared quota · ${priority === 'five-hour' ? '5h first' : 'Tightest'}${data?.partial ? ' · partial coverage' : ''}`}
+          title={`Remaining shared quota${data?.partial ? ' · partial coverage' : ''}`}
         >
           <GaugeIcon className="size-3" />
           <span>
@@ -306,25 +267,6 @@ function QuotaChip() {
       >
         <div className="border-b border-border/70 px-3 py-2.5">
           <div className="font-medium">Subscription limits</div>
-          <div className="mt-1.5 flex items-center justify-between gap-3 text-[10px] text-muted-foreground">
-            <label htmlFor="limits-priority">Chip priority</label>
-            <select
-              id="limits-priority"
-              value={priority}
-              onChange={(event) =>
-                changePriority(event.target.value === 'tightest' ? 'tightest' : 'five-hour')
-              }
-              className="rounded border border-border/70 bg-popover px-1 py-0.5 text-foreground outline-none focus-visible:ring-1 focus-visible:ring-brand"
-            >
-              <option value="five-hour">5h first</option>
-              <option value="tightest">Tightest</option>
-            </select>
-          </div>
-          {saveFailed && (
-            <div className="mt-1 text-[10px] text-warning">
-              Preference could not be saved in this browser.
-            </div>
-          )}
         </div>
         <div className="max-h-[min(65vh,560px)] overflow-y-auto px-3 py-2.5 divide-y divide-border/70">
           {open &&

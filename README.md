@@ -4,7 +4,7 @@ Personal extension in a standalone repository, linked as `~/.ultimate/extensions
 
 ## Display and project scope
 
-The collapsed chip follows the shown conversation's provider. `5h first` prefers an unexpired shared five-hour window, otherwise the first longer shared window. `Tightest` shows the smallest remaining value across shared windows. The chip names the window, for example `Go · 5h 100%` or `Codex · 7d 68%`. A provider-reported or observed exhausted window always remains visible as `limit reached`, even when the selected five-hour allowance is larger.
+The collapsed chip follows the shown conversation's provider and shows the remaining percentage of the shortest shared window that provider reports: the five-hour window when there is one, otherwise the weekly one, otherwise the monthly one. It reads `Go · 100%` or `Codex · 68%`; the window it belongs to is named in the popup. There is no chip preference to choose. A provider-reported or observed exhausted window always remains visible as `limit reached`, even when the selected five-hour allowance is larger.
 
 The popup lists all subscriptions **used by this project**, with the current provider first and quietly marked Current. Each has independent windows, resets, freshness, dashboard and refresh controls. A slow or failed provider does not hold up another row. The bar uses its existing 12px slot gap, without extra separators or margins.
 
@@ -12,7 +12,7 @@ Project scope comes from the native `models/families` action: effective agent/fe
 
 The server checks this same scope **before resolving auth** on every quota action. Missing or failed scope reads stop quota/auth reads, rather than falling back to machine-wide logins. There is no cross-project fan-out.
 
-Choose `5h first / Tightest` in the popup. The preference is browser-local; the key `subscription-quota.priority` is intentionally retained across this preview's rename. No migration code or quota history is stored.
+Nothing is stored in the browser: no preference, migration code or quota history.
 
 ## Sources
 

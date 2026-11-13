@@ -35,6 +35,13 @@ export const providers: Record<
   },
 }
 
+export const providerLabel = (provider: string) =>
+  Object.hasOwn(providers, provider)
+    ? providers[provider]!.label
+    : provider === 'xai'
+      ? 'Grok'
+      : provider
+
 const object = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -116,7 +123,7 @@ export function parse(provider: string, value: unknown, now: number): Snapshot {
   }
   return {
     provider,
-    label: providers[provider]?.label ?? provider,
+    label: providerLabel(provider),
     checkedAt: now,
     windows,
     status: windows.length ? 'ok' : 'unavailable',
@@ -133,7 +140,7 @@ export function parse(provider: string, value: unknown, now: number): Snapshot {
 export function unavailable(provider: string, now: number, detail: string): Snapshot {
   return {
     provider,
-    label: providers[provider]?.label ?? (provider === 'xai' ? 'Grok' : provider),
+    label: providerLabel(provider),
     status: 'unavailable',
     detail,
     windows: [],
@@ -144,8 +151,6 @@ export function unavailable(provider: string, now: number, detail: string): Snap
 export function displayed(snapshot: Snapshot, now: number): Window[] {
   return snapshot.windows.filter((item) => item.resetAt === undefined || item.resetAt > now)
 }
-
-export type Priority = 'five-hour' | 'tightest'
 
 export function configuredSubscriptions<
   T extends { id: string; status: { configured: boolean }; isUsingSubscription: boolean },
@@ -160,14 +165,14 @@ export function configuredSubscriptions<
     .sort((a, b) => Number(b.id === current) - Number(a.id === current))
 }
 
-export function preferred(snapshot: Snapshot, now: number, priority: Priority): Window | undefined {
-  const windows = displayed(snapshot, now)
-  if (priority === 'tightest')
-    return windows.find((item) => item.remaining === remaining(snapshot, now))
-  return windows.find((item) => item.label === '5 hours') ?? windows[0]
-}
+/** The shortest shared window a provider reports: five hours, then a week, then a month. */
+const order = ['5 hours', '7 days', 'Month']
 
-export function remaining(snapshot: Snapshot, now: number): number | undefined {
+export function preferred(snapshot: Snapshot, now: number): Window | undefined {
   const windows = displayed(snapshot, now)
-  return windows.length ? Math.min(...windows.map((item) => item.remaining)) : undefined
+  for (const label of order) {
+    const found = windows.find((item) => item.label === label)
+    if (found) return found
+  }
+  return windows[0]
 }

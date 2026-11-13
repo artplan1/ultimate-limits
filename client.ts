@@ -1,19 +1,10 @@
 import { createHash } from 'node:crypto'
+import type { ModelRuntime } from '@earendil-works/pi-coding-agent'
 import { createCache, TTL } from './cache.ts'
 import { parse, providers, unavailable, type Snapshot } from './quota.ts'
 
 export type Host = {
-  modelRuntime: {
-    getAuth(
-      provider: string,
-      options: { signal: AbortSignal },
-    ): Promise<
-      | {
-          auth: { apiKey?: string; baseUrl?: string; headers?: Record<string, string | undefined> }
-        }
-      | undefined
-    >
-    isUsingOAuth(provider: string): boolean
+  modelRuntime: Pick<ModelRuntime, 'getAuth' | 'isUsingOAuth'> & {
     getProvider(provider: string): { baseUrl?: string } | undefined
   }
 }
