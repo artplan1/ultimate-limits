@@ -1,10 +1,12 @@
+# Ultimate Limits
+
 Subscription limits for the current Ultimate project, with the current conversation's allowance in the bottom bar.
 
 Personal extension in a standalone repository, linked as `~/.ultimate/extensions/limits`. Package: `ultimate-limits`; extension/action id: `limits`. It uses Ultimate's SDK and existing provider authentication, with no dependencies to install.
 
-![Limits chip in the status bar: a gauge icon and the provider with its remaining percentage](screenshots/limits-chip.png)
+<img src="screenshots/limits-footer.png" width="406" alt="Ultimate's bottom bar: token rate, running agents and spend, then the limits chip with the provider's remaining percentage">
 
-![Limits popup listing the project's subscriptions with their windows, resets and refresh controls](screenshots/limits-popover.png)
+<img src="screenshots/limits-popover.png" width="360" alt="Limits popup listing the project's subscriptions with their windows, resets and refresh controls">
 
 ## Display and project scope
 
